@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Отчеты о рассылках{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Отчеты о рассылках</h1>
+
+{% for mailing in mailings %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h2>{{ mailing.message.subject }}</h2>
+    </div>
+    <div class="card-body">
+        <p><strong>Статус:</strong> {{ mailing.get_status_display }}</p>
+        
+        <h4 class="mt-4">Статистика:</h4>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Успешно</h5>
+                        <p class="card-text display-4">{{ mailing.success_attempts.count }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Неуспешно</h5>
+                        <p class="card-text display-4">{{ mailing.failed_attempts.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h4 class="mt-4">Последние попытки:</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Статус</th>
+                    <th>Ответ сервера</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attempt in mailing.attempts.all|slice:":5" %}
+                <tr>
+                    <td>{{ attempt.attempt_time }}</td>
+                    <td>{{ attempt.get_status_display }}</td>
+                    <td>{{ attempt.server_response|truncatechars:50 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
