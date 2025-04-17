@@ -1,0 +1,114 @@
+{% extends 'mailing/base.html' %}
+
+{% block title %}Редактирование профиля{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Редактирование профиля</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {# Основные поля #}
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_first_name" class="form-label">Имя</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.first_name.errors.as_text }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_last_name" class="form-label">Фамилия</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.last_name.errors.as_text }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {# Email и телефон #}
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.email.errors.as_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_phone" class="form-label">Телефон</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.phone.errors.as_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Аватар #}
+                        <div class="mb-3">
+                            <label for="id_avatar" class="form-label">Аватар</label>
+                            <div class="d-flex align-items-center">
+                                {% if user.avatar %}
+                                    <img src="{{ user.avatar.url }}" alt="Текущий аватар"
+                                         class="rounded-circle me-3" width="80" height="80">
+                                {% endif %}
+                                {{ form.avatar }}
+                            </div>
+                            {% if form.avatar.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.avatar.errors.as_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Дополнительные поля #}
+                        <div class="mb-3">
+                            <label for="id_country" class="form-label">Страна</label>
+                            {{ form.country }}
+                            {% if form.country.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.country.errors.as_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'mailing:profile' %}" class="btn btn-outline-secondary me-md-2">
+                                Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Стили для улучшения внешнего вида полей формы */
+    .form-control, .form-select {
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+{% endblock %}

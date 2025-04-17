@@ -12,14 +12,16 @@ class ClientAdmin(admin.ModelAdmin):
     def comment_short(self, obj):
         return obj.comment[:50] + '...' if obj.comment else ''
 
+
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('subject', 'body_short')
+    list_display = ('subject', 'created_at')
+    list_filter = ('created_at',)  # Убрали 'owner', фильтруем по дате
     search_fields = ('subject', 'body')
-    list_filter = ('owner',)
 
     def body_short(self, obj):
         return obj.body[:100] + '...' if len(obj.body) > 100 else obj.body
+
 
 @admin.register(Mailing)
 class MailingAdmin(admin.ModelAdmin):
@@ -27,6 +29,7 @@ class MailingAdmin(admin.ModelAdmin):
     list_filter = ('status', 'owner')
     filter_horizontal = ('clients',)
     readonly_fields = ('status',)
+
 
 @admin.register(MailingAttempt)
 class MailingAttemptAdmin(admin.ModelAdmin):

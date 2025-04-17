@@ -8,4 +8,3 @@ urlpatterns = [
     path('mailing/', include('mailing.urls')),
     path('', home, name='home'),
 ]
-
