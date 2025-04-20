@@ -6,14 +6,19 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db import IntegrityError
+
+from myproject.settings import CACHE_TTL
 from .models import Mailing, Client, Message, User, MailingAttempt
 from .forms import MailingForm, ClientForm, MessageForm, UserEditForm
 from django.views.generic import UpdateView, DeleteView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
+from django.core.cache import cache
 
-
+@cache_page(CACHE_TTL)
 @login_required
 def home(request):
     """Главная страница с общей статистикой"""
@@ -36,7 +41,7 @@ class MailingCreateView(LoginRequiredMixin, CreateView):
     """Создание новой рассылки"""
     model = Mailing
     form_class = MailingForm
-    template_name = 'mailing/mailing_form.html'
+    template_name = 'mailing/mailing/mailing_form.html'
     success_url = reverse_lazy('mailing:mailing_list')
 
     def form_valid(self, form):
@@ -56,12 +61,13 @@ class MailingCreateView(LoginRequiredMixin, CreateView):
 
 class MailingDeleteView(LoginRequiredMixin, DeleteView):
     model = Mailing
-    template_name = 'mailing/mailing_confirm_delete.html'
+    template_name = 'mailing/mailing/mailing_confirm_delete.html'
     success_url = reverse_lazy('mailing:mailing_list')
 
+@method_decorator(cache_page(CACHE_TTL), name='dispatch')
 class MailingDetailView(LoginRequiredMixin, DetailView):
     model = Mailing
-    template_name = 'mailing/mailing_detail.html'
+    template_name = 'mailing/mailing/mailing_detail.html'
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -69,11 +75,11 @@ class MailingDetailView(LoginRequiredMixin, DetailView):
             queryset = queryset.filter(owner=self.request.user)
         return queryset
 
-
+@method_decorator(cache_page(CACHE_TTL), name='dispatch')
 class MailingListView(LoginRequiredMixin, ListView):
     """Список рассылок"""
     model = Mailing
-    template_name = 'mailing/mailing_list.html'
+    template_name = 'mailing/mailing/mailing_list.html'
     context_object_name = 'mailings'
 
     def get_queryset(self):
@@ -96,7 +102,7 @@ class MailingListView(LoginRequiredMixin, ListView):
 class MailingUpdateView(LoginRequiredMixin, UpdateView):
     model = Mailing
     form_class = MailingForm
-    template_name = 'mailing/mailing_form.html'
+    template_name = 'mailing/mailing/mailing_form.html'
     success_url = reverse_lazy('mailing:mailing_list')
 
     def get_form_kwargs(self):
@@ -127,17 +133,24 @@ class ClientListView(LoginRequiredMixin, ListView):
     context_object_name = 'clients'
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.groups.filter(name='Менеджеры').exists():
-            queryset = queryset.filter(owner=self.request.user)
-        return queryset
+        cache_key = f'clients_{self.request.user.id}'  # Уникальный ключ для пользователя
+        clients = cache.get(cache_key)
+
+        if not clients:
+            queryset = super().get_queryset()
+            if not self.request.user.groups.filter(name='Менеджеры').exists():
+                queryset = queryset.filter(owner=self.request.user)
+            clients = list(queryset)  # Приводим к списку для кэширования
+            cache.set(cache_key, clients, CACHE_TTL)
+
+        return clients
 
 
 class MessageCreateView(LoginRequiredMixin, CreateView):
     """Создание сообщения"""
     model = Message
     form_class = MessageForm
-    template_name = 'mailing/message_form.html'
+    template_name = 'mailing/message/message_form.html'
     success_url = reverse_lazy('mailing:message_list')
 
     def form_valid(self, form):
@@ -169,7 +182,7 @@ class ClientDeleteView(LoginRequiredMixin, DeleteView):
 
 class MessageListView(LoginRequiredMixin, ListView):
     model = Message
-    template_name = 'mailing/message_list.html'
+    template_name = 'mailing/message/message_list.html'
     context_object_name = 'messages'
     paginate_by = 10  # Добавляем пагинацию
 
@@ -182,12 +195,12 @@ class MessageListView(LoginRequiredMixin, ListView):
 class MessageUpdateView(LoginRequiredMixin, UpdateView):
     model = Message
     form_class = MessageForm
-    template_name = 'mailing/message_form.html'
+    template_name = 'mailing/message/message_form.html'
     success_url = reverse_lazy('mailing:message_list')
 
 class MessageDeleteView(LoginRequiredMixin, DeleteView):
     model = Message
-    template_name = 'mailing/message_confirm_delete.html'
+    template_name = 'mailing/message/message_confirm_delete.html'
     success_url = reverse_lazy('mailing:message_list')
 
 
@@ -198,7 +211,7 @@ def send_mailing(request, pk):
     # Проверка прав доступа
     if mailing.owner != request.user:
         messages.error(request, "У вас нет прав для запуска этой рассылки")
-        return redirect('mailing:mailing_list')
+        return redirect('mailing/mailing:mailing_list')
 
     # Проверка временного интервала
     now = timezone.now()
@@ -212,7 +225,7 @@ def send_mailing(request, pk):
         messages.error(request, "Время рассылки истекло")
     else:
         try:
-            result = mailing.send_to_all()
+            result = mailing.send_mailing()
             messages.success(
                 request,
                 f"Рассылка успешно запущена! Успешно: {result['success']}, Неудачно: {result['failed']}"
@@ -220,11 +233,8 @@ def send_mailing(request, pk):
         except Exception as e:
             messages.error(request, f"Ошибка при отправке рассылки: {str(e)}")
 
-    return redirect('mailing:mailing_detail', pk=pk)
+    return redirect('mailing/mailing:mailing_detail', pk=pk)
 
-
-class Attempt:
-    pass
 
 
 class AttemptListView(LoginRequiredMixin, ListView):
@@ -234,10 +244,17 @@ class AttemptListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('mailing', 'mailing__message')
-        if not self.request.user.groups.filter(name='Менеджеры').exists():
-            queryset = queryset.filter(mailing__owner=self.request.user)
-        return queryset.order_by('-attempt_time')
+        cache_key = f'attempts_{self.request.user.id}'
+        attempts = cache.get(cache_key)
+
+        if not attempts:
+            queryset = super().get_queryset().select_related('mailing', 'mailing__message')
+            if not self.request.user.groups.filter(name='Менеджеры').exists():
+                queryset = queryset.filter(mailing__owner=self.request.user)
+            attempts = list(queryset.order_by('-attempt_time'))
+            cache.set(cache_key, attempts, CACHE_TTL)
+
+        return attempts
 
 
 class RegisterView(CreateView):
@@ -251,8 +268,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'mailing/auth/edit_profile.html'
     success_url = reverse_lazy('mailing:profile')
 
-    def get_object(self):
-        return self.request.user
+
 
 
 class ProfileView(LoginRequiredMixin, TemplateView):

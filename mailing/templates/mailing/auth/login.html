@@ -18,7 +18,7 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" action="{% url 'login' %}">
+                    <form method="post" action="{% url 'mailing:login' %}">
                         {% csrf_token %}
 
                         <div class="form-floating mb-4">
