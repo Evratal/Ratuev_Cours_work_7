@@ -1,9 +1,17 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm, SetPasswordForm, PasswordResetForm
-from .models import Mailing, Client, Message, User
+from django.contrib.auth.forms import (
+    UserCreationForm,
+    SetPasswordForm,
+    PasswordResetForm,
+    AuthenticationForm
+)
+from .models import Mailing, Client, Message
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 
 class MailingForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -70,7 +78,9 @@ class RegisterForm(UserCreationForm):
         email = self.cleaned_data['email'].lower()
         if User.objects.filter(email=email).exists():
             raise ValidationError(_("Этот email уже зарегистрирован."))
+
         return email
+
 
 class ClientForm(forms.ModelForm):
     # Форма клиента
@@ -129,6 +139,7 @@ class UserEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.fields['email'].disabled = True  # Альтернатива readonly
 
 
@@ -157,14 +168,18 @@ class LoginForm(AuthenticationForm):
         'inactive': _("Аккаунт неактивен. Подтвердите email."),
     }
 
+
 class CustomPasswordResetForm(PasswordResetForm):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
             'placeholder': 'example@mail.com'
+
         }),
         help_text=_("На этот email придёт ссылка для сброса пароля.")
+
     )
+
 
 class CustomSetPasswordForm(SetPasswordForm):
     new_password1 = forms.CharField(

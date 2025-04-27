@@ -1,4 +1,4 @@
-from django.core.mail import send_mail
+from django.http import Http404
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.generic import CreateView, ListView, TemplateView, DetailView
@@ -6,17 +6,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db import IntegrityError
-
 from myproject.settings import CACHE_TTL
 from .models import Mailing, Client, Message, User, MailingAttempt
 from .forms import MailingForm, ClientForm, MessageForm, UserEditForm
 from django.views.generic import UpdateView, DeleteView
 from django.shortcuts import get_object_or_404, redirect
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.core.cache import cache
+from django.contrib.auth import login
+from .forms import RegisterForm
+
 
 @cache_page(CACHE_TTL)
 @login_required
@@ -59,10 +60,13 @@ class MailingCreateView(LoginRequiredMixin, CreateView):
         kwargs['user'] = self.request.user
         return kwargs
 
+
 class MailingDeleteView(LoginRequiredMixin, DeleteView):
     model = Mailing
     template_name = 'mailing/mailing/mailing_confirm_delete.html'
+
     success_url = reverse_lazy('mailing:mailing_list')
+
 
 @method_decorator(cache_page(CACHE_TTL), name='dispatch')
 class MailingDetailView(LoginRequiredMixin, DetailView):
@@ -72,8 +76,10 @@ class MailingDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         queryset = super().get_queryset()
         if not self.request.user.groups.filter(name='Менеджеры').exists():
+
             queryset = queryset.filter(owner=self.request.user)
         return queryset
+
 
 @method_decorator(cache_page(CACHE_TTL), name='dispatch')
 class MailingListView(LoginRequiredMixin, ListView):
@@ -95,9 +101,11 @@ class MailingListView(LoginRequiredMixin, ListView):
                 mailing.save()
             elif now > mailing.end_time and mailing.status != 'completed':
                 mailing.status = 'completed'
+
                 mailing.save()
 
         return queryset
+
 
 class MailingUpdateView(LoginRequiredMixin, UpdateView):
     model = Mailing
@@ -108,7 +116,9 @@ class MailingUpdateView(LoginRequiredMixin, UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
+
         return kwargs
+
 
 class ClientCreateView(LoginRequiredMixin, CreateView):
     """Добавление нового клиента"""
@@ -118,12 +128,13 @@ class ClientCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('mailing:client_list')
 
     def form_valid(self, form):
-        try:
-            form.instance.owner = self.request.user
-            return super().form_valid(form)
-        except IntegrityError:
-            form.add_error('email', 'Клиент с таким email уже существует')
-            return self.form_invalid(form)
+        form.instance.owner = self.request.user
+        response = super().form_valid(form)
+
+        # Очищаем кеш после добавления
+        cache.delete(f'clients_{self.request.user.id}')
+        messages.success(self.request, 'Клиент успешно добавлен')
+        return response
 
 
 class ClientListView(LoginRequiredMixin, ListView):
@@ -133,8 +144,10 @@ class ClientListView(LoginRequiredMixin, ListView):
     context_object_name = 'clients'
 
     def get_queryset(self):
-        cache_key = f'clients_{self.request.user.id}'  # Уникальный ключ для пользователя
-        clients = cache.get(cache_key)
+        queryset = super().get_queryset()
+        if not self.request.user.groups.filter(name='Менеджеры').exists():
+            queryset = queryset.filter(owner=self.request.user)
+        return queryset.order_by('-id')
 
         if not clients:
             queryset = super().get_queryset()
@@ -151,16 +164,20 @@ class MessageCreateView(LoginRequiredMixin, CreateView):
     model = Message
     form_class = MessageForm
     template_name = 'mailing/message/message_form.html'
+
     success_url = reverse_lazy('mailing:message_list')
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
         return super().form_valid(form)
 
+
 class ClientUpdateView(LoginRequiredMixin, UpdateView):
+
     model = Client
     form_class = ClientForm
     template_name = 'mailing/client_form.html'
+
     success_url = reverse_lazy('mailing:client_list')
 
     def get_queryset(self):
@@ -168,6 +185,7 @@ class ClientUpdateView(LoginRequiredMixin, UpdateView):
         if not self.request.user.groups.filter(name='Менеджеры').exists():
             queryset = queryset.filter(owner=self.request.user)
         return queryset
+
 
 class ClientDeleteView(LoginRequiredMixin, DeleteView):
     model = Client
@@ -180,6 +198,27 @@ class ClientDeleteView(LoginRequiredMixin, DeleteView):
             queryset = queryset.filter(owner=self.request.user)
         return queryset
 
+    def delete(self, request, *args, **kwargs):
+        try:
+            client = self.get_object()
+            client_email = client.email
+            client.delete()
+
+            # Полная очистка кеша клиентов
+            cache.delete_many([
+                f'clients_{request.user.id}',
+                'all_clients_stats',
+                'active_clients_count'
+            ])
+
+            messages.success(request, f'Клиент {client_email} удален')
+            return redirect(self.success_url)
+
+        except Http404:
+            messages.error(request, "Клиент не найден")
+            return redirect(self.success_url)
+
+
 class MessageListView(LoginRequiredMixin, ListView):
     model = Message
     template_name = 'mailing/message/message_list.html'
@@ -188,15 +227,19 @@ class MessageListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
         if not self.request.user.groups.filter(name='Менеджеры').exists():
             queryset = queryset.filter(owner=self.request.user)
         return queryset.order_by('-created_at')
+
 
 class MessageUpdateView(LoginRequiredMixin, UpdateView):
     model = Message
     form_class = MessageForm
     template_name = 'mailing/message/message_form.html'
+
     success_url = reverse_lazy('mailing:message_list')
+
 
 class MessageDeleteView(LoginRequiredMixin, DeleteView):
     model = Message
@@ -236,7 +279,6 @@ def send_mailing(request, pk):
     return redirect('mailing/mailing:mailing_detail', pk=pk)
 
 
-
 class AttemptListView(LoginRequiredMixin, ListView):
     model = MailingAttempt
     template_name = 'mailing/attempt_list.html'
@@ -258,17 +300,26 @@ class AttemptListView(LoginRequiredMixin, ListView):
 
 
 class RegisterView(CreateView):
-    form_class = UserCreationForm
+    form_class = RegisterForm
     template_name = 'mailing/registration/register.html'
-    success_url = reverse_lazy('mailing:home')
+    success_url = reverse_lazy('mailing:login')
+
+    def form_valid(self, form):
+        # Сохраняем пользователя
+        user = form.save()
+
+        # Явно указываем бэкенд для автовхода
+        backend = 'django.contrib.auth.backends.ModelBackend'
+        login(self.request, user, backend=backend)
+
+        return super().form_valid(form)
+
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UserEditForm
     template_name = 'mailing/auth/edit_profile.html'
     success_url = reverse_lazy('mailing:profile')
-
-
 
 
 class ProfileView(LoginRequiredMixin, TemplateView):

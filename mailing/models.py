@@ -1,3 +1,4 @@
+from django.contrib.auth.base_user import BaseUserManager
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
@@ -7,36 +8,75 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib import messages
 
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
+
+
 class User(AbstractUser):
-    email = models.EmailField(unique=True, verbose_name='Email')
+    # Корректное объявление поля email (без дублирования verbose_name)
+    email = models.EmailField(
+        ('email address'),  # Здесь уже установлен verbose_name
+        unique=True,
+        help_text=('Required. Must be a valid email address.')
+    )
+
+    username = models.CharField(
+        ('username'),
+        max_length=150,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text=('Optional. 150 characters or fewer.')
+    )
+
     avatar = models.ImageField(
         upload_to='avatars/',
         blank=True,
         null=True,
-        verbose_name='Аватар'
+        verbose_name=('Avatar')
     )
+
     phone = models.CharField(
         max_length=15,
         blank=True,
         null=True,
-        verbose_name='Телефон'
+        verbose_name=('Phone number')
     )
+
     country = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        verbose_name='Страна'
+        verbose_name=('Country')
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = []
+
+    objects = UserManager()
 
     class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
+        verbose_name = ('User')
+        verbose_name_plural = ('Users')
 
     def __str__(self):
         return self.email
+
+    def get_backend(self):
+        return 'django.contrib.auth.backends.ModelBackend'
 
 
 class Client(models.Model):

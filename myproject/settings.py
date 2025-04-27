@@ -67,7 +67,7 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates/mailing')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -158,7 +158,10 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-LOGIN_URL = "/mailing/login/"
+
+LOGIN_REDIRECT_URL = 'mailing:profile'  # Перенаправление после входа
+LOGIN_URL = 'mailing:login'            # URL для входа
+LOGOUT_REDIRECT_URL = 'mailing:home'   # Перенаправление после выхода
 
 SERVER_EMAIL = EMAIL_HOST_USER
 
@@ -202,7 +205,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-#Логгирование
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -223,3 +226,4 @@ LOGGING = {
 }
 # Время жизни кеша по умолчанию (в секундах)
 CACHE_TTL = 60 * 15  # 15 минут
+LOGOUT_REDIRECT_URL = 'home'

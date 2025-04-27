@@ -1,0 +1,70 @@
+{% extends 'mailing/base.html' %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="text-center font-weight-light my-4">Вход в систему</h3>
+                </div>
+                <div class="card-body">
+                    {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        Неправильный email или пароль. Пожалуйста, попробуйте снова.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'mailing:login' %}">
+                        {% csrf_token %}
+
+                        <div class="form-floating mb-4">
+                            <input type="email" name="username" class="form-control" id="id_username"
+                                   placeholder="name@example.com" required autofocus>
+                            <label for="id_username">Email</label>
+                        </div>
+
+                        <div class="form-floating mb-4">
+                            <input type="password" name="password" class="form-control"
+                                   id="id_password" placeholder="Пароль" required>
+                            <label for="id_password">Пароль</label>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Войти</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <div class="small">
+                        Нет аккаунта? <a href="{% url 'mailing:register' %}">Создать аккаунт</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+        border: none;
+    }
+    .form-floating > .form-control {
+        height: 56px;
+        padding: 1rem 1.25rem;
+    }
+    .form-floating > label {
+        padding: 1rem 1.25rem;
+    }
+    .btn-primary {
+        background-color: #4e73df;
+        border: none;
+        padding: 12px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
