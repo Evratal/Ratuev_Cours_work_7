@@ -1,0 +1,34 @@
+{% extends "mailing/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Подтверждение удаления</h2>
+        </div>
+        <div class="card-body">
+            {% if object %}
+                <p>Вы уверены, что хотите удалить клиента <strong>"{{ object.full_name }}"</strong> ({{ object.email }})?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                        <a href="{% url 'mailing:client_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Клиент не найден или уже удалён
+                </div>
+                <a href="{% url 'mailing:client_list' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Вернуться к списку клиентов
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

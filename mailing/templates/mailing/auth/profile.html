@@ -1,0 +1,30 @@
+{% extends "mailing/base.html" %}
+
+{% block title %}Мой профиль{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3>Мой профиль</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" class="img-fluid rounded-circle" alt="Аватар">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        <p><strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}</p>
+                        <p><strong>Страна:</strong> {{ user.country|default:"Не указана" }}</p>
+                        <a href="{% url 'mailing:edit_profile' %}" class="btn btn-primary">Редактировать</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

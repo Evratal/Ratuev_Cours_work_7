@@ -1,0 +1,74 @@
+{% extends "mailing/base.html" %}
+
+{% block title %}Детали рассылки{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">
+                <i class="fas fa-mail-bulk"></i> {{ object.message.subject }}
+                <span class="badge bg-{% if object.status == 'completed' %}secondary
+                                   {% elif object.status == 'started' %}success
+                                   {% else %}info{% endif %} float-end">
+                    {{ object.get_status_display }}
+                </span>
+            </h2>
+        </div>
+
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-calendar-alt"></i> Временные параметры</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Начало:</strong> {{ object.start_time|date:"d.m.Y H:i" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Окончание:</strong> {{ object.end_time|date:"d.m.Y H:i" }}
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5><i class="fas fa-chart-bar"></i> Статистика</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Клиентов:</strong> {{ object.clients.count }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Попыток:</strong> {{ object.attempts.count }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-envelope"></i> Содержание письма</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ object.message.subject }}</h6>
+                    <hr>
+                    <div class="bg-light p-3 rounded">
+                        {{ object.message.body|linebreaks }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'mailing:mailing_list' %}" class="btn btn-secondary me-md-2">
+                    <i class="fas fa-list"></i> К списку
+                </a>
+                <a href="{% url 'mailing:mailing_update' object.pk %}" class="btn btn-primary me-md-2">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+                {% if object.status != 'completed' %}
+                <a href="{% url 'mailing:mailing_send' object.pk %}" class="btn btn-success">
+                    <i class="fas fa-paper-plane"></i> Отправить сейчас
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

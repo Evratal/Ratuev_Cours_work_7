@@ -1,0 +1,67 @@
+{% extends "mailing/base.html" %}
+
+{% block title %}{% if object %}Редактирование{% else %}Создание{% endif %} рассылки{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">
+                <i class="fas fa-{% if object %}edit{% else %}plus-circle{% endif %}"></i>
+                {% if object %}Редактирование{% else %}Новая{% endif %} рассылка
+            </h2>
+        </div>
+        <div class="card-body">
+            <form method="post" id="mailingForm">
+                {% csrf_token %}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        {{ form.start_time.label_tag }}
+                        {{ form.start_time }}
+                        <small class="form-text text-muted">Дата и время начала рассылки</small>
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.end_time.label_tag }}
+                        {{ form.end_time }}
+                        <small class="form-text text-muted">Дата и время окончания</small>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form.message.label_tag }}
+                    {{ form.message }}
+                    <small class="form-text text-muted">Выберите созданное сообщение</small>
+                </div>
+
+                <div class="mb-4">
+                    {{ form.clients.label_tag }}
+                    {{ form.clients }}
+                    <small class="form-text text-muted">Выберите одного или нескольких клиентов</small>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% if object %}{% url 'mailing:mailing_detail' object.pk %}
+                            {% else %}{% url 'mailing:mailing_list' %}{% endif %}"
+                       class="btn btn-secondary me-md-2">
+                        <i class="fas fa-times"></i> Отмена
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Кастомные стили для формы */
+    #mailingForm select[multiple] {
+        height: 200px;
+    }
+    .form-control, .form-select {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
